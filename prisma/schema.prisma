@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  role            String   @default("CONTRIBUTOR")
+  tooltipEnabled  Boolean  @default(true)
+  tourDismissed   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // task relations
+  createdTasks    Task[]   @relation("TaskCreatedBy")
+  assignedTasks   Task[]   @relation("TaskAssignedTo")
+  subtasks        SubTask[]
+
+  // activity + notifications
+  taskActivity    TaskActivity[]
+  notifications   Notification[]
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  title          String
+  description    String   @default("")
+  status         String   @default("ASSIGNED")
+  priority       String   @default("NORMAL")
+  dueAt          DateTime?
+  acceptedAt     DateTime?
+  declinedAt     DateTime?
+  declineReason  String   @default("")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdById    String
+  createdBy      User     @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  assignedToId   String
+  assignedTo     User     @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+
+  subtasks       SubTask[]
+  activity       TaskActivity[]
+}
+
+model SubTask {
+  id          String   @id @default(cuid())
+  title       String
+  done        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model TaskActivity {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  action    String
+  metadata  String
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  url         String
+  icon        String
+  category    String
+  adminOnly   Boolean  @default(false)
+  embedUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
